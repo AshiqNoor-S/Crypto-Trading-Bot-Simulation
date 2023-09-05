@@ -1,5 +1,7 @@
 # Crypto Trading Bot Simulation with Streamlit
 
+##Deployed app link: https://trading-bot-2esbr29hycqzyxshkdets7.streamlit.app/
+
 ## Overview
 
 This project is a Python-based simulation of a cryptocurrency trading bot using the Streamlit framework. It allows users to configure and run a simple trading strategy and observe the bot's actions and account balance in real-time. 
