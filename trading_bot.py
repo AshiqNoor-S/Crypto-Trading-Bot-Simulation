@@ -2,6 +2,8 @@ import time
 import pandas as pd
 import requests
 import streamlit as st
+import numpy as np
+from statsmodels.tsa.arima.model import ARIMA
 
 # CryptoCompare API endpoints
 BASE_URL = "https://min-api.cryptocompare.com/data/"
@@ -26,6 +28,10 @@ initial_balance = st.sidebar.number_input("Initial Account Balance (USDT)", min_
 pair = st.sidebar.text_input("Trading Pair (e.g., BTC/USDT)", value="BTC/USDT")
 short_window = st.sidebar.number_input("Short Window (days)", min_value=1, value=50)
 long_window = st.sidebar.number_input("Long Window (days)", min_value=1, value=200)
+arima_order = st.sidebar.text_input("ARIMA Order (p, d, q)", value="1,1,1")
+
+# Convert ARIMA order to integers
+p, d, q = map(int, arima_order.split(','))
 
 # Display user-defined settings
 st.sidebar.subheader("Bot Configuration")
@@ -33,6 +39,7 @@ st.sidebar.write(f"Initial Balance: {initial_balance} USDT")
 st.sidebar.write(f"Trading Pair: {pair}")
 st.sidebar.write(f"Short Window: {short_window} days")
 st.sidebar.write(f"Long Window: {long_window} days")
+st.sidebar.write(f"ARIMA Order: ({p}, {d}, {q})")
 
 col1, col2 = st.columns(2)
 start_bot = col1.button("Start Bot")
@@ -61,6 +68,11 @@ def calculate_moving_averages(df, short_window, long_window):
     df['SMA200'] = df['close'].rolling(window=long_window).mean()
     return df
 
+def fit_arima_model(series, order):
+    model = ARIMA(series, order=order)
+    fit_model = model.fit()
+    return fit_model
+
 def execute_order(order_type, price, quantity):
     global account_balance
     
@@ -83,7 +95,15 @@ def main():
         st.write(f"Data fetched at {data.index[-1]}")
         st.write(f"SMA50: {data['SMA50'].iloc[-1]}, SMA200: {data['SMA200'].iloc[-1]}")
 
-        # Implement a simple crossover strategy
+        # Implement ARIMA prediction
+        close_prices = data['close']
+        arima_model = fit_arima_model(close_prices, order=(p, d, q))
+        forecast_steps = 5  # Number of steps to forecast
+        arima_forecast = arima_model.forecast(steps=forecast_steps)
+
+        st.write(f"ARIMA Forecast: {arima_forecast}")
+
+        # Implement a simple crossover strategy with ARIMA
         if data['SMA50'].iloc[-2] < data['SMA200'].iloc[-2] and data['SMA50'].iloc[-1] >= data['SMA200'].iloc[-1]:
             st.write(f"Buy signal at {data.index[-1]}")
             # Hypothetical buy order
@@ -95,11 +115,8 @@ def main():
             execute_order('sell', data['close'].iloc[-1], 1)
         
         else:
-            st.write("Hold")  # Neither buy nor sell conditions met
-        
+            st.write("Hold")  # Neither buy
         time.sleep(bot_speed)  # Sleep for user-defined seconds
 
 if __name__ == '__main__':
     main()
-    if stop_bot:  # Stop the bot when the "Stop Bot" button is pressed
-        output_area.text("Bot stopped.")
